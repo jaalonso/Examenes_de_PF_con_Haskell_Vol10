@@ -1,4 +1,4 @@
--- Informática (1º del Grado en Matemáticas, Grupos 1, 2 y 3)
+-- Informática (1º del Grado en Matemáticas, Grupos 4 y 5)
 -- 3º examen de evaluación continua (22 de enero de 2019)
 -- ---------------------------------------------------------------------
 
@@ -10,128 +10,133 @@ import Data.List
 
 -- ---------------------------------------------------------------------
 -- Ejercicio 1. Definir la función
---    divisoresConFinal :: Integer -> Integer -> [Integer]
--- tal que (divisoresConFinal n m) es la lista de los divisores de n
--- cuyos dígitos finales coincide con m. por ejemplo,
---    divisoresConFinal 84 4    ==  [4,14,84]
---    divisoresConFinal 720 20  ==  [20,120,720]
+--    nParejas :: Ord a => [a] -> Int
+-- tal que (nParejas xs) es el número de parejas de elementos iguales en
+-- xs. Por rjemplo,
+--    nParejas [1,2,2,1,1,3,5,1,2]        ==  3
+--    nParejas [1,2,1,2,1,3,2]            ==  2
+--    nParejas [1..2*10^6]                ==  0
+--    nParejas2 ([1..10^6] ++ [1..10^6])  ==  1000000
+-- En el primer ejemplos las parejas son (1,1), (1,1) y (2,2). En el
+-- segundo ejemplo, las parejas son (1,1) y (2,2).
 -- ---------------------------------------------------------------------
 
 -- 1ª solución
--- ===========
-
-divisoresConFinal :: Integer -> Integer -> [Integer]
-divisoresConFinal n m = 
-  [x | x <- [1..n], n `rem` x == 0, final x m]
-
-final :: Integer -> Integer -> Bool
-final x y = take n xs == ys
-    where xs = reverse (show x)
-          ys = reverse (show y)
-          n  = length ys
+nParejas :: Ord a => [a] -> Int
+nParejas []     = 0
+nParejas (x:xs) | x `elem` xs = 1 + nParejas (xs \\ [x])
+                | otherwise   = nParejas xs
 
 -- 2ª solución
--- ===========
+nParejas2 :: Ord a => [a] -> Int
+nParejas2 xs =
+  sum [length ys `div` 2 | ys <- group (sort xs)]
 
-divisoresConFinal2 :: Integer -> Integer -> [Integer]
-divisoresConFinal2 n m = 
-    [x | x <- [1..n], n `rem` x == 0, show m `isSuffixOf` show x]
+-- 3ª solución
+nParejas3 :: Ord a => [a] -> Int
+nParejas3 = sum . map (`div` 2) . map length . group . sort
+
+-- 4ª solución
+nParejas4 :: Ord a => [a] -> Int
+nParejas4 = sum . map ((`div` 2) . length) . group . sort
 
 -- ---------------------------------------------------------------------
 -- Ejercicio 2. Definir la función
---    alternativa :: (a -> b) -> (a -> b) -> [a] -> [b]
--- tal que (alternativa f g xs) es la lista obtenida aplicando
--- alternativamente las funciones f y g a los elementos de xs. por
--- ejemplo, 
---    alternativa (+1)  (+10) [1,2,3,4]    ==  [2,12,4,14]
---    alternativa (+10) (*10) [1,2,3,4,5]  ==  [11,20,13,40,15]
+--    maximos :: Ord a => [a] -> [a]
+-- tal que (maximos xs) es la lista de los elementos de xs que son
+-- mayores que todos sus anteriores. Por ejemplo, 
+--    maximos [1,-3,5,2,3,4,7,6,7]                         ==  [1,5,7]
+--    maximos "bafcdegag"                                  ==  "bfg"
+--    maximos (concat (replicate (10^6) "adxbcde")++"yz")  ==  "adxyz"
+--    length (maximos [1..10^6])                           ==  1000000
 -- ---------------------------------------------------------------------
 
 -- 1ª solución
-alternativa :: (a -> b) -> (a -> b) -> [a] -> [b]
-alternativa f g []     = []
-alternativa f g (x:xs) = f x : alternativa g f xs
+maximos :: Ord a => [a] -> [a]
+maximos xs =
+  [x | (ys,x) <- zip (inits xs) xs, all (<x) ys]
 
 -- 2ª solución
-alternativa2 :: (a -> b) -> (a -> b) -> [a] -> [b]
-alternativa2 f g xs = 
-  [h x | (h,x) <- zip (cycle [f,g]) xs]
+maximos2 :: Ord a => [a] -> [a]
+maximos2 [] = []
+maximos2 (x:xs) = x : maximos2 (filter (>x) xs)
+
+-- 3ª solución
+maximos3 :: Ord a => [a] -> [a]
+maximos3 [] = []
+maximos3 (x:xs) = aux xs [x] x
+    where aux [] zs _ = reverse zs
+          aux (y:ys) zs m | y > m     = aux ys (y:zs) y
+                          | otherwise = aux ys zs m 
+
+-- 4ª solución
+maximos4 :: Ord a => [a] -> [a]
+maximos4 = nub . scanl1 max 
 
 -- ---------------------------------------------------------------------
--- Ejercicio 3. La sucesión de los primeros números de Fibonacci es
---    0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, ...
--- el fibonacci más cercano a un número x es el menor elemento y de la
--- sucesión de Fibonacci tal que el valor absoluto de la diferencia
--- entre x e y es la menor posible. por ejemplo, 
--- + el fibonacci más cercano a 16 es 13 porque |16-13| < |16-21|
--- + el fibonacci más cercano a 17 es 13 porque |17-13| = |17-21| y 17 < 21
--- + el fibonacci más cercano a 18 es 21 porque |18-13| > |18-21|
--- + el fibonacci más cercano a 21 es 21 porque 21 es un número de fibonacci.
+-- Ejercicio 3. La sucesión de los primeros factoriales es
+--    1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, ...
+-- El factorial más cercano a un número x es el menor elemento y de la
+-- sucesión de los factoriales tal que el valor absoluto de la
+-- diferencia entre x e y es la menor posible. Por ejemplo,
+-- + el factorial más cercano a 3 es 2 porque |3-2| < |3-6|
+-- + el factorial más cercano a 4 es 2 porque |4-2| = |4-6| y 2 < 
+-- + el factorial más cercano a 5 es 6 porque |5-2| > |5-6|
+-- + el factorial más cercano a 5 es 6 porque 6 es un factorial.
 --
 -- Definir la función
---    fibonacciMasCercano :: Integer -> Integer
--- tal que (fibonacciMasCercano n) es el número de fibonacci más cercano
--- a n. por ejemplo, 
---    fibonacciMasCercano 16    ==  13
---    fibonacciMasCercano 17    ==  13
---    fibonacciMasCercano 18    ==  21
---    fibonacciMasCercano 21    ==  21
---    fibonacciMasCercano 2019  ==  1597
+--    factorialMasCercano :: Integer -> Integer
+-- tal que (factorialMasCercano n) es el factorial más cercano a n. Por
+-- ejemplo, 
+--    factorialMasCercano 3  ==  2
+--    factorialMasCercano 4  ==  2
+--    factorialMasCercano 5  ==  6
+--    factorialMasCercano 6  ==  6
+--    factorialMasCercano 2019  ==  720
 -- ---------------------------------------------------------------------
 
-fibonacciMasCercano :: Integer -> Integer
-fibonacciMasCercano n
+factorialMasCercano :: Integer -> Integer
+factorialMasCercano n
   | b == n                 = n
   | abs (n-a) <= abs (n-b) = a
   | otherwise              = b
-  where (xs,b:ys) = span (<n) fibs
-        a         = last xs
+  where (xs,b:ys) = span (<n) factoriales
+        a = last xs
 
-fibs :: [Integer]
-fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
+factoriales :: [Integer]
+factoriales = scanl1 (*) [1..]
 
 -- ---------------------------------------------------------------------
--- Ejercicio 4. Los árboles se pueden representar mediante el siguiente
--- tipo de datos 
---    data Arbol a = N a [Arbol a]
+-- Ejercicio 4. Las expresiones aritméticas. generales se contruyen con
+-- las sumas generales (sumatorios) y productos generales (productorios).
+-- Su tipo es 
+--    data Expresion = N Int
+--                   | S [Expresion]
+--                   | P [Expresion]
 --      deriving Show
--- por ejemplo, los árboles
---      1               3
---     / \             /|\ 
---    2   3           / | \
---        |          5  4  7
---        4          |     /\ 
---                   6    2  1
--- se representan por
---    ej1, ej2 :: Arbol Int
---    ej1 = N 1 [N 2 [],N 3 [N 4 []]]
---    ej2 = N 3 [N 5 [N 6 []], N 4 [], N 7 [N 2 [], N 1 []]
--- 
--- Definir la función 
---    ramas :: Arbol b -> [[b]]
--- tal que (ramas a) es la lista de las ramas del árbol a. Por ejemplo,
---    ramas ej1  ==  [[1,2],[1,3,4]]
---    ramas ej2  ==  [[3,5,6],[3,4],[3,7,2],[3,7,1]]
+-- Por ejemplo, la expresión (2 * (1 + 2 + 1) * (2 + 3)) + 1 se
+-- representa por S [P [N 2, S [N 1, N 2, N 1], S [N 2, N 3]], N 1]
+--
+-- Definir la función
+--    valor :: Expresion -> Int
+-- tal que (valor e) es el valor de la expresión e. Por ejemplo,
+--    λ> valor (S [P [N 2, S [N 1, N 2, N 1], S [N 2, N 3]], N 1])
+--    41
 -- ---------------------------------------------------------------------
 
-data Arbol a = N a [Arbol a]
+data Expresion = N Int
+               | S [Expresion]
+               | P [Expresion]
   deriving Show
 
-ej1, ej2 :: Arbol Int
-ej1 = N 1 [N 2 [],N 3 [N 4 []]]
-ej2 = N 3 [N 5 [N 6 []], N 4 [], N 7 [N 2 [], N 1 []]]
-
 -- 1ª solución
-ramas :: Arbol b -> [[b]]
-ramas (N x []) = [[x]]
-ramas (N x as) = [x : xs | a <- as, xs <- ramas a]
+valor :: Expresion -> Int
+valor (N x)  = x
+valor (S es) = sum (map valor es)
+valor (P es) = product (map valor es)
 
 -- 2ª solución
-ramas2 :: Arbol b -> [[b]]
-ramas2 (N x []) = [[x]]
-ramas2 (N x as) = concat (map (map (x:)) (map ramas2 as))
-
--- 3ª solución
-ramas3 :: Arbol b -> [[b]]
-ramas3 (N x []) = [[x]]
-ramas3 (N x as) = concatMap (map (x:)) (map ramas3 as)
+valor2 :: Expresion -> Int
+valor2 (N x)  = x
+valor2 (S es) = sum [valor2 e | e <- es]
+valor2 (P es) = product [valor2 e | e <- es]

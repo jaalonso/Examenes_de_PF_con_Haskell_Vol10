@@ -1,276 +1,193 @@
--- Informatica (1º del Grado en Matematicas) Grupo 1
--- Examen 5 de evaluacion alternativa (3 de mayo de 2019)
+-- Informática (1º del Grado en Matemáticas, Grupo 4)
+-- 5º examen de evaluación continua (3 de mayo de 2019)
 -- ---------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------
--- Librerias auxiliares
+-- § Librerías auxiliares                                             --
 -- ---------------------------------------------------------------------
 
 import Data.List
-import Data.Array
-import I1M.Cola
-import I1M.PolOperaciones
+import Data.Array as A
+import Data.Map as M
+import Data.Set as S
 import I1M.Grafo
+import System.Timeout
 
 -- ---------------------------------------------------------------------
--- Ejercicio 1.1. Un número natural x es un cuadrado perfecto si x es
--- el cuadrado de algún natural. Por ejemplo, 36 es un cuadrado perfecto
--- y 12 no lo es.  
--- 
--- Un número entero positivo sera ordenado si sus dígitos
--- aparecen en orden creciente o bien en orden decreciente. Por
--- ejemplo, 11468 y 974000 son ordenados y 16832 no lo es. 
--- 
--- Definir la lista infinita
---    cuadradosOrdenados :: [Integer]
--- cuyos elementos son los cuadrados que son ordenados. Por ejemplo, 
---    Main> take 19 cuadradosOrdenados
---    [1,4,9,16,25,36,49,64,81,100,144,169,225,256,289,400,441,841,900]
+-- Ejercicio 1.1. [1 punto] Dado 4 puntos de un círculo se pueden
+-- dibujar 2 cuerdas entre ellos de forma que no se corten. En efecto,
+-- si se enumeran los puntos del 1 al 4 en sentido de las agujas del
+-- reloj una forma tiene las cuerdas {1-2, 3-4} y la otra {1-4, 2-3}.
+--
+-- Definir la función
+--    numeroFormas :: Integer -> Integer
+-- tal que (numeroFormas n) es el número de formas que se pueden dibujar
+-- n cuerdas entre 2xn puntos de un círculo sin que se corten. Por
+-- ejemplo, 
+--    numeroFormas 1   ==  1
+--    numeroFormas 2   ==  2
+--    numeroFormas 4   ==  14
 -- ---------------------------------------------------------------------
 
-cuadradosOrdenados :: [Integer]
-cuadradosOrdenados = filter ordenado [i^2 | i <- [1..]]
+-- 1ª definición
+numeroFormas :: Integer -> Integer
+numeroFormas 0 = 0
+numeroFormas n = aux (2*n)
+  where aux 0 = 1
+        aux 2 = 1
+        aux i = sum [aux j * aux (i-2-j) | j <- [0,2..i-1]]
 
-ordenado :: Integer -> Bool
-ordenado x = cs == ds || cs == reverse ds
-  where cs = digitos x
-        ds = sort cs
+-- 2ª definición
+numeroFormas2 :: Integer -> Integer
+numeroFormas2 0 = 0
+numeroFormas2 n = v A.! (2*n)
+  where v   = array (0,2*n) [(i, f i) | i <- [0..2*n]]
+        f 0 = 1
+        f 2 = 1
+        f i = sum [v A.! j * v A.! (i-2-j) | j <- [0,2..i-1]]
 
-digitos :: Integer -> [Int]
-digitos x = [read [i] | i <- show x]
+-- Comparación de eficiencia
+-- =========================
+
+--    λ> numeroFormas 15
+--    9694845
+--    (28.49 secs, 4,293,435,552 bytes)
+--    λ> numeroFormas2 15
+--    9694845
+--    (0.01 secs, 184,552 bytes)
 
 -- ---------------------------------------------------------------------
--- Ejercicio 1.2. Calcula el mayor cuadrado ordenado de 7 dígitos. 
+-- Ejercicio 1.2 [1.5 puntos]. Con la definición del apartado anterior,
+-- evaluar (en menos de 2 segundos), el número de dígitos de
+-- (numeroFormas 700); es decir, evaluar la siguiente expresión para que
+-- de un valor distinto de Nothing
+--    timeout (2*10^6) (return $! (length (show (numeroFormas 700))))
 -- ---------------------------------------------------------------------
 
 -- El cálculo es
---   Main> last (takeWhile (<=10^7-1) cuadradosOrdenados)
---   9853321
+--    λ> timeout (2*10^6) (return $! (length (show (numeroFormas 700))))
+--    Just 417
+--    (1.65 secs, 230,243,040 bytes)
 
 -- ---------------------------------------------------------------------
--- Ejercicio 2. Definir la función
---    posicionesPares :: Cola a -> Cola a
--- tal que (posicionesPares p) devuelve la cola obtenida tomando los
--- elementos que ocupan las posiciones pares en la cola p. Por ejemplo,
---    Main> c = (foldr inserta vacia [0..9])
---    Main> d = (foldr inserta vacia [0..10])
---    Main> c
---    C [9,8,7,6,5,4,3,2,1,0]
---    Main> colaPosPares c
---    C [9,7,5,3,1]
---    Main> d
---    C [10,9,8,7,6,5,4,3,2,1,0]
---    Main> colaPosPares d
---    C [10,8,6,4,2,0]
---    Main> colaPosPares (foldr inserta  vacia "salamanca")
---    C "anmls"
+-- Ejercicio 2. [2.5 puntos]. Definir la función
+--    mayoritarios :: Ord a => Set (Set a) -> [a]
+-- tal que (mayoritarios f) es la lista de elementos que pertenecen al
+-- menos a la mitad de los conjuntos de la familia f. Por ejemplo,
+--    λ> mayoritarios (S.fromList [S.empty, S.fromList [1,3], S.fromList [3,5]])
+--    [3]
+--    λ> mayoritarios (S.fromList [S.empty, S.fromList [1,3], S.fromList [4,5]])
+--    []
+--    λ> mayoritarios (S.fromList [S.fromList [1..n] | n <- [1..7]])
+--    [1,2,3,4]
+--    λ> mayoritarios (S.fromList [S.fromList [1..n] | n <- [1..8]])
+--    [1,2,3,4,5]
 -- ---------------------------------------------------------------------
 
-colaPosPares :: Cola a -> Cola a
-colaPosPares p = aux p vacia
-  where aux c r 
-          | esVacia c  = r
-          | esVacia rc = inserta pc r
-          | otherwise  = aux (resto rc) (inserta pc r)
-          where (pc,rc) = (primero c, resto c)
+mayoritarios :: Ord a => Set (Set a) -> [a]
+mayoritarios f =
+  [x | x <- S.toList (elementosFamilia f)
+     , nOcurrencias f x >= n]
+  where n = (1 + S.size f) `div` 2
+
+-- (elementosFamilia f) es el conjunto de los elementos de los elementos
+-- de la familia f. Por ejemplo, 
+--    λ> elementosFamilia (S.fromList [S.fromList [1,2], S.fromList [2,5]])
+--    fromList [1,2,5]
+elementosFamilia :: Ord a => Set (Set a) -> Set a
+elementosFamilia = S.unions . S.toList
+
+-- (nOcurrencias f x) es el número de conjuntos de la familia f a los
+-- que pertenece el elemento x. nOcurrencias :: Ord a => Set (Set a) -> a -> Int
+nOcurrencias f x =
+  length [c | c <- S.toList f, x `S.member` c]
 
 -- ---------------------------------------------------------------------
--- Ejercicio 3. Una matriz de enteros p se dira "de unos en línea" si
--- cumple que:
---    toda fila de p contiene, como maximo un 1;
---    o bien toda columna de p contiene, como maximo un 1.
+-- Ejercicio 3 [2.5 puntos]. Los polinomios se pueden representar
+-- mediante diccionarios con los exponentes como claves y los
+-- coeficientes como valores. 
 -- 
---  Definir la función
---     unoEnlinea :: Matrix Int -> Bool
---  tal que (unoEnlinea p) se verifica si la matriz p es de unos en
---  linea según la definición anterior. Por ejemplo,
---     Main> unoEnlinea (fromLists [[0,0,1,0,0],[1,0,0,0,0],[0,0,0,0,1]])
---     True
---     Main> unoEnlinea (fromLists [[0,0,0,0],[0,1,0,0],[0,0,0,1],[0,1,1,0]])
---     False
---     Main> unoEnlinea (fromLists [[0,1],[2,0]])
---     True
--- ---------------------------------------------------------------------
-
-unoEnlinea :: Array (Int,Int) Int -> Bool
-unoEnlinea p =
-  all tieneComoMaximoUnUno (filas ++ columnas) 
-  where (_,(m,n)) = bounds p
-        filas     = [[p!(i,j) | j <- [1..n]] | i <- [1..m]]
-        columnas  = [[p!(i,j) | i <- [1..m]] | j <- [1..n]]
-
-tieneComoMaximoUnUno :: [Int] -> Bool
-tieneComoMaximoUnUno xs = length (filter (==1) xs) <= 1
-
--- ---------------------------------------------------------------------
--- Ejercicio 4.1. Definir la función
---    corte :: (Eq a,Num a) => Int -> Polinomio a -> Polinomio a
--- tal que (corte k p) es el polinomio formado por los términos de p de
--- grado mayor o igual que k. Por ejemplo,  
---    Main> corte 3 (consPol 5 2 (consPol 3 (-7) (consPol 2 1 polCero)))
---    2*x^5 + -7*x^3
---    Main> corte 2 (consPol 5 2 (consPol 3 (-7) (consPol 2 1 polCero)))
---    2*x^5 + -7*x^3 + x^2
---    Main> corte 4 (consPol 5 2 (consPol 3 (-7) (consPol 2 1 polCero)))
---    2*x^5
--- ---------------------------------------------------------------------
-
-corte :: (Eq a, Num a) => Int -> Polinomio a -> Polinomio a
-corte k p
-  | k < 0       = polCero
-  | esPolCero p = polCero
-  | k > n       = polCero
-  | otherwise   = consPol n a (corte k (restoPol p))
-  where n = grado p
-        a = coefLider p
-
--- ---------------------------------------------------------------------
--- Ejercicio 4.2. Un polinomio de enteros se dirá impar si su término
--- independiente es impar y el resto de sus coeficientes (si los
--- hubiera) son pares. 
+-- El tipo de los polinomios con coeficientes de tipo a se define por 
+--    type Polinomio a = M.Map Int a
+-- 
+-- Dos ejemplos de polinomios (que usaremos en los ejemplos) son
+--    3 + 7x - 5x^3
+--    4 + 5x^3 + x^5
+-- se definen por
+--   ejPol1, ejPol2 :: Polinomio Int
+--   ejPol1 = M.fromList [(0,3),(1,7),(3,-5)]
+--   ejPol2 = M.fromList [(0,4),(3,5),(5,1)]
 -- 
 -- Definir la función
---    imparPol :: Integral a => Polinomio a -> Bool
--- tal que (imparPol p) se verifica si p es un polinomio impar de
--- acuerdo con la definicion anterior. Por ejemplo,
---    Main> imparPol (consPol 5 2 (consPol 3 6 (consPol 0 3 polCero)))
---    True
---    Main> imparPol (consPol 5 2 (consPol 3 6 (consPol 0 4 polCero)))
---    False
---    Main> imparPol (consPol 5 2 (consPol 3 1 (consPol 0 3 polCero)))
---    False
+--    multPol :: (Eq a, Num a) => Polinomio a -> Polinomio a -> Polinomio a
+-- tal que (multPol p q) es el producto de los polinomios p y q. Por ejemplo, 
+--    ghci> multPol ejPol1 ejPol2
+--    fromList [(0,12),(1,28),(3,-5),(4,35),(5,3),(6,-18),(8,-5)]
+--    ghci> multPol ejPol1 ejPol1
+--    fromList [(0,9),(1,42),(2,49),(3,-30),(4,-70),(6,25)]
+--    ghci> multPol ejPol2 ejPol2
+--    fromList [(0,16),(3,40),(5,8),(6,25),(8,10),(10,1)]
 -- ---------------------------------------------------------------------
 
--- 1ª solución
--- ===========
+type Polinomio a = M.Map Int a 
 
-imparPol :: Integral a => Polinomio a -> Bool
-imparPol p = odd (coeficiente 0 p) &&
-             all even [coeficiente k p | k <- [1..grado p]]
+ejPol1, ejPol2 :: Polinomio Int
+ejPol1 = M.fromList [(0,3),(1,7),(3,-5)]
+ejPol2 = M.fromList [(0,4),(3,5),(5,1)]
 
-coeficiente :: Integral a => Int -> Polinomio a -> a
-coeficiente k p
-  | esPolCero p = 0
-  | k > n       = 0
-  | k == n      = coefLider p
-  | otherwise   = coeficiente k (restoPol p)
-  where n = grado p
+multPol :: (Eq a, Num a) => Polinomio a -> Polinomio a -> Polinomio a
+multPol p q
+  | M.null p  = M.empty
+  | otherwise = sumaPol (multPorTerm t q) (multPol r q)
+  where (t,r) = M.deleteFindMin p
 
--- 2ª solución
--- ===========
-
-imparPol2 :: Integral a => Polinomio a -> Bool
-imparPol2 p =
-  all even [coeficiente k (sumaPol p polUnidad) | k <- [0..grado p]]
-
--- ---------------------------------------------------------------------
--- Ejercicio 5. Un conjunto V de nodos de un grafo no dirigido g forma
--- un club si dos elementos cualesquiera de V tienen una arista en g que
--- los conecta. Por ejemplo, en el grafo:
---      4 ---- 5 
---      |      | \
---      |      |  1
---      |      | /
---      3 ---- 2   
--- el conjunto de vértices {1,2,5} forma un club y el conjunto {2,3,4,5}
--- no.
--- 
--- En Haskell se puede representar el grafo anterior por
---    g1 :: Grafo Int Int
---    g1 = creaGrafo ND
---                   (1,5) 
---                   [(1,2,0),(1,5,0),(2,3,0),(3,4,0),(5,2,0),(4,5,0)]
--- 
--- Definir la función
---    esUnClub :: Grafo Int Int -> [Int] -> Bool
--- tal que (esUnClub g xs) se verifica si xs forma un club en g. Por
+-- (multPorTerm (n,a) p) es el producto del término ax^n por p. Por
 -- ejemplo, 
---    esUnClub g1 [1,2,5]   == True
---    esUnClub g1 [2,3,4,5] == False
+--    ghci> multPorTerm (2,3) (M.fromList [(0,4),(2,1)])
+--    fromList [(2,12),(4,3)]
+multPorTerm :: Num a => (Int,a) -> Polinomio a -> Polinomio a
+multPorTerm (n,a) p =
+  M.map (*a) (M.mapKeys (+n) p)
+
+-- (sumaPol p q) es la suma de los polinomios p y q. Por ejemplo,
+--    ghci> sumaPol ejPol1 ejPol2
+--    fromList [(0,7),(1,7),(5,1)]
+--    ghci> sumaPol ejPol1 ejPol1
+--    fromList [(0,6),(1,14),(3,-10)]
+sumaPol :: (Num a, Eq a) => Polinomio a -> Polinomio a -> Polinomio a
+sumaPol p q = 
+  M.filter (/=0) (M.unionWith (+) p q)
+
 -- ---------------------------------------------------------------------
-
-g1 :: Grafo Int Int
-g1 = creaGrafo ND
-               (1,5) 
-               [(1,2,0),(1,5,0),(2,3,0),(3,4,0),(5,2,0),(4,5,0)]
-
-esUnClub :: Grafo Int Int -> [Int] -> Bool
-esUnClub g xs = all (aristaEn g) [(x,y) | x <- ys, y <- ys, y < x]
-    where ys = sort xs
-
--- ---------------------------------------------------------------------
--- Ejercicio 6. El siguiente triángulo se construye sabiendo
--- que se verifica la siguiente relación 
---    A(n,m)=(n-m)A(n-1,m-1) + (m+1)A(n-1,m).
--- Sus primeros términos son
---    1 
---    1 0                                                       
---    1 1   0                                               
---    1 4   1     0                                       
---    1 11  11    1     0                               
---    1 26  66    26    1      0                       
---    1 57  302   302   57     1     0               
---    1 120 1191  2416  1191   120   1     0       
---    1 247 4293  15619 15619  4293  247   1   0
---    1 502 14608 88234 156190 88234 14608 502 1 0
--- 
--- Definir las siguientes funciones:
---   num           :: Integer -> Integer -> Integer
---   filaTriangulo :: Integer -> [Integer]
---   triangulo     :: [[Integer]]
+-- Ejercicio 4 [2.5 puntos] Definir las funciones
+--    grafoD  :: [(Int,Int)] -> Grafo Int Int
+--    grafoND :: Grafo Int Int -> Grafo Int Int
 -- tales que
--- + (num n k) es el número A(n,k). Por ejemplo, 
---      num 8 3  == 15619
---      num 20 6 == 21598596303099900
--- + (filaTriangulo n) es la n-sima fila del triángulo. Por ejemplo, 
---      ghci> filaTriangulo 8
---      [1,247,4293,15619,15619,4293,247,1]
---      ghci> filaTriangulo 12
---      [1,4083,478271,10187685,66318474,162512286,162512286,66318474,
---       10187685,478271,4083,1]
--- + triangulo es la lista con las filas del triángulo
+-- + (grafoD ps) es el grafo dirigido cuyas cuyos nodos son todos los
+--   elementos comprendidos entre el menor y el mayor de las componentes
+--   de los elementos de ps y las aristas son los elementos de ps
+--   añadiéndole el peso cero. Por ejemplo,
+--      λ> grafoD [(1,3),(1,4),(4,1)]
+--      G D (array (1,4) [(1,[(3,0),(4,0)]),(2,[]),(3,[]),(4,[(1,0)])])
+--      λ> grafoD [(1,1),(1,2),(2,2)]
+--      G D (array (1,2) [(1,[(1,0),(2,0)]),(2,[(2,0)])])
+-- + (grafoND g) es el grafo no dirigido correspondiente al grafo
+--   dirigido g (en el que todos los pesos son 0); es decir, es un grafo
+--   que tiene el mismo conjunto de nodos que g pero sus aristas son las
+--   de g junto con sus inversas. Por ejemplo,
+--      λ> grafoND (grafoD [(1,3),(1,4),(4,1)])
+--      G ND (array (1,4) [(1,[(3,0),(4,0)]),(2,[]),(3,[(1,0)]),(4,[(1,0)])])
+--      λ> grafoND (grafoD [(1,1),(1,2),(2,2)])
+--      G ND (array (1,2) [(1,[(1,0),(2,0)]),(2,[(2,0),(1,0)])])
 -- ---------------------------------------------------------------------
 
--- 1ª solución
--- ===========
+grafoD :: [(Int,Int)] -> Grafo Int Int
+grafoD ps = creaGrafo D (1,n) [(x,y,0) | (x,y) <- ps]
+  where n = maximum [max x y | (x,y) <- ps]
 
-triangulo1 :: [[Integer]]
-triangulo1 = iterate siguiente [1]
-
-siguiente :: [Integer] -> [Integer]
-siguiente xs = zipWith (+) us vs
-  where n = genericLength xs
-        us = [x*k | (x,k) <-zip (0:xs) [n+1,n..1]]
-        vs = [x*k | (x,k) <-zip (xs++[0]) [1..n+1]]
-
--- Otra definición de siguiente es
-siguiente' :: [Integer] -> [Integer]
-siguiente' xs = zipWith (+) us vs
-  where n = genericLength xs
-        us = zipWith (*) (0:xs) [n+1,n..1]
-        vs = zipWith (*) (xs++[0]) [1..n+1]
-
-filaTriangulo1 :: Integer -> [Integer]
-filaTriangulo1 n = triangulo1 `genericIndex` (n-1)
-
-num1 :: Integer -> Integer -> Integer
-num1 n k = (filaTriangulo1 n) `genericIndex` k
-
--- 2ª solución
-
-num :: Integer -> Integer -> Integer
-num n k = (matrizE n k) ! (n,k)
-
-matrizE :: Integer -> Integer -> Array (Integer,Integer) Integer
-matrizE n m = q
-  where q = array ((0,0),(n,m)) [((i,j), f i j) | i <-[0..n],j<-[0..m]]
-        f i 0 = 1
-        f i j
-          | i == j    = 0
-          | otherwise = (i-j) * q!(i-1,j-1) + (j+1)* q!(i-1,j)
-
-filaTriangulo :: Integer -> [Integer]
-filaTriangulo n = map (num n) [0..n]
-
-triangulo :: [[Integer]]
-triangulo = map filaTriangulo [0..]
+grafoND :: Grafo Int Int -> Grafo Int Int
+grafoND g = creaGrafo ND (1,n) (nub [(x,y,0) | (x,y,_) <- as ++ bs])
+  where n  = maximum (nodos g)
+        as = aristas g
+        bs = [(y,x,p) | (x,y,p) <- as]
+  
